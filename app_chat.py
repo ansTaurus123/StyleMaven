@@ -139,17 +139,24 @@ if user_input:
     # Store user message in the chat history
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # Prepare messages for the API call, including the previous conversation
-    messages = [system_message] + st.session_state.messages
+    # Create a message containing the user's personal inputs
+    user_profile_message = {
+        "role": "user",
+        "content": f"User profile: Name: {name}, Age: {age}, Location: {location}, Gender: {gender}, Ethnicity: {ethnicity}, Height: {height}, Weight: {weight}, Skin Tone: {skin_tone}"
+    }
 
-    # Add the latest user input as the most recent message
-    messages.append({"role": "user", "content": user_input})
+    # Check if the profile message is already in the conversation; if not, add it
+    if len(st.session_state.messages) == 1:  # Assuming this is the first message
+        st.session_state.messages.insert(0, user_profile_message)
+
+    # Prepare messages for the API call, including the profile and the conversation history
+    messages = [system_message] + st.session_state.messages
 
     try:
         # Generate a response from the Groq API
         completion = client.chat.completions.create(
             model="llama3-8b-8192",
-            messages=messages,  # Send the entire conversation
+            messages=messages,  # Send the entire conversation with profile info
             temperature=1,
             max_tokens=1024,
             top_p=1,
