@@ -1,46 +1,28 @@
 import streamlit as st
 import pandas as pd
 from groq import Groq
-from pinecone import Pinecone, ServerlessSpec
+import pinecone
+
+# Initialize the Pinecone client
+pinecone.init(api_key='765debca-6efe-4d64-a9fd-fe2eb6386158', environment='us-east-1')
+
+# Connect to your Pinecone index
+index_name = "fashionassistant"
+index = pinecone.Index(index_name)
 
 # Initialize the Groq client with your API key
 client = Groq(api_key="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")
-# Initialize Pinecone with API key and serverless spec for AWS region 'us-east-1'
-pinecone.init(
-    api_key='ed2e35ad-250c-4831-a198-229d14c0901d',  # Replace with your actual API key
-    spec=ServerlessSpec(cloud="aws", region="us-east-1")  # Specify the cloud and region
-)
-
-index_name = 'fashion-assistant'  # Name of the Pinecone index
-if index_name not in pinecone.list_indexes():
-    pinecone.create_index(index_name, dimension=512)  # Change dimension based on your embeddings
-index = pinecone.Index(index_name)
 
 # Define the system message for the model
 system_message = {
     "role": "system",
-    "content": "You are an experienced Fashion designer who starts conversations with proper greetings, gives valuable and catchy fashion advice, and suggestions, stays to the point, and asks questions only if the user has concerns over your provided suggestions."
+    "content": "You are an experienced Fashion designer..."
 }
 
 # Function to reset the chat
 def reset_chat():
     st.session_state.messages = []
     st.session_state.chat_title = "New Chat"
-
-# Function to store chat history in Pinecone
-def store_chat_in_pinecone(chat_history, user_id):
-    for idx, message in enumerate(chat_history):
-        vector_id = f"{user_id}_message_{idx}"
-        data = {
-            "role": message["role"],
-            "content": message["content"]
-        }
-        index.upsert([(vector_id, [0.0]*512, data)])  # The embedding vector here is just [0.0]*512, replace with real embeddings if needed
-
-# Function to store the questionnaire responses in Pinecone
-def store_questionnaire_in_pinecone(questionnaire_data, user_id):
-    vector_id = f"{user_id}_questionnaire"
-    index.upsert([(vector_id, [0.0]*512, questionnaire_data)])  # The embedding vector here is just [0.0]*512, replace with real embeddings if needed
 
 # Initialize session state variables
 if 'messages' not in st.session_state:
@@ -65,6 +47,16 @@ with st.sidebar:
 
     if st.button("Reset Chat"):
         reset_chat()
+# Function to store chat in Pinecone
+def store_chat_in_pinecone(chat_data):
+    vector = [1] * 1536  # Dummy vector (Replace this with actual embedding from your model)
+    chat_id = len(st.session_state.messages)  # Chat ID to track messages
+    index.upsert(vectors=[(str(chat_id), vector, chat_data)])
+
+# Function to store questionnaire data in Pinecone
+def store_questionnaire_in_pinecone(questionnaire_data):
+    vector = [1] * 1536  # Dummy vector (Replace this with actual embedding from your model)
+    index.upsert(vectors=[("questionnaire", vector, questionnaire_data)])
 
 # Button to open the questionnaire
 if st.button("Please fill the questionnaire"):
@@ -141,12 +133,10 @@ if st.session_state.questionnaire_open and not st.session_state.questionnaire_su
             "preferred_prints": preferred_prints,
             "ai_usefulness": ai_usefulness     
         }
+        df = pd.DataFrame([questionnaire_data])  # Create DataFrame from dictionary
+        df.to_csv("questionnaire_responses.csv", mode='a', header=not pd.io.common.file_exists("questionnaire_responses.csv"), index=False)
+        store_questionnaire_in_pinecone(questionnaire_data)  # Store in Pinecone
         
-       # Submit button for questionnaire
-    if st.button("Submit Questionnaire"):
-        # Store the questionnaire in Pinecone
-        store_questionnaire_in_pinecone(questionnaire_data, user_id)
-
         st.session_state.questionnaire_open = False
         st.session_state.questionnaire_submitted = True
         st.success("Thank you for completing the questionnaire!")
