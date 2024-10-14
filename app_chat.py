@@ -3,12 +3,10 @@ import pandas as pd
 from groq import Groq
 import pinecone
 
-# Initialize the Pinecone client
-pinecone.init(api_key='765debca-6efe-4d64-a9fd-fe2eb6386158', environment='us-east-1')
+import pinecone
 
-# Connect to your Pinecone index
-index_name = "fashionassistant"
-index = pinecone.Index(index_name)
+pc = Pinecone(api_key="765debca-6efe-4d64-a9fd-fe2eb6386158")
+index = pc.Index("fashionassistant")
 
 # Initialize the Groq client with your API key
 client = Groq(api_key="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")
