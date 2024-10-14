@@ -7,7 +7,7 @@ from groq import Groq
 client = Groq(api_key="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")
 
 # Initialize Pinecone
-pinecone.init(api_key='your_pinecone_api_key', environment='your_pinecone_env')  # Replace with your Pinecone API key and environment
+pinecone.init(api_key='ed2e35ad-250c-4831-a198-229d14c0901d')  # Replace with your Pinecone API key and environment
 index_name = 'fashion-assistant'  # Name of the Pinecone index
 if index_name not in pinecone.list_indexes():
     pinecone.create_index(index_name, dimension=512)  # Change dimension based on your embeddings
