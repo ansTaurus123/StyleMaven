@@ -1,18 +1,6 @@
 import streamlit as st
 import pandas as pd
 from groq import Groq
-import pinecone
-from openai.embeddings_utils import get_embedding
-
-# Initialize Pinecone
-pinecone.init(api_key="ed2e35ad-250c-4831-a198-229d14c0901d", environment="us-west1-gcp")
-
-# Create or connect to Pinecone index
-index_name = "fashion-assistant-conversations"
-if index_name not in pinecone.list_indexes():
-    pinecone.create_index(index_name, dimension=1536)  # Using OpenAI text-embedding-ada-002
-
-index = pinecone.Index(index_name)
 
 # Initialize the Groq client with your API key
 client = Groq(api_key="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")
@@ -20,44 +8,24 @@ client = Groq(api_key="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"
 # Define the system message for the model
 system_message = {
     "role": "system",
-    "content": "You are an experienced Fashion designer who starts conversation with proper greet, giving valuable and catchy fashion advices and suggestions, stays to the point, and asks questions only if the user has any concerns. You take inputs like name, age, gender, location, ethnicity, height, weight, skin tone."
+    "content": "You are an experienced Fashion designer who starts conversation with proper greet, giving valuable and catchy fashion advices and and suggestions, stays to the point, asks questions only if the user have any concern over your provided suggestions, taking inputs like name, age, gender, location, ethnicity, height, weight, skin tone"
 }
 
 # Function to reset the chat
-def reset_chat(user_id):
+def reset_chat():
     st.session_state.messages = []
     st.session_state.chat_title = "New Chat"
-    # Optionally, clear the user's conversation history from Pinecone
-    index.delete(ids=[f"{user_id}-*"])  # Deletes all conversations associated with the user
-
-# Function to store messages in Pinecone
-def store_message_in_pinecone(message, user_id, role):
-    # Create an embedding for the message
-    embedding = get_embedding(message, engine="text-embedding-ada-002")
-    
-    # Store the message and its embedding in Pinecone
-    index.upsert(vectors=[(f"{user_id}-{len(st.session_state.messages)}", embedding, {"role": role, "content": message})])
-
-# Function to retrieve conversation history from Pinecone
-def retrieve_conversation_from_pinecone(user_id):
-    query_response = index.query(f"{user_id}*", top_k=100, include_metadata=True)
-    conversation = [{"role": item['metadata']['role'], "content": item['metadata']['content']} for item in query_response['matches']]
-    return conversation
 
 # Initialize session state variables
 if 'messages' not in st.session_state:
     st.session_state.messages = []
     st.session_state.chat_title = "Fashion Assistant"
+if 'questionnaire_open' not in st.session_state:
+    st.session_state.questionnaire_open = False
+if 'questionnaire_submitted' not in st.session_state:
+    st.session_state.questionnaire_submitted = False
 
-user_id = st.text_input("Enter your user ID:", value="user_1")  # Unique user identifier
-
-# Check if there's existing conversation in Pinecone and retrieve it
-if len(st.session_state.messages) == 0:
-    previous_conversation = retrieve_conversation_from_pinecone(user_id)
-    if previous_conversation:
-        st.session_state.messages = previous_conversation
-
-# Sidebar for user inputs
+# Sidebar for user inputs (chat will work regardless of whether questionnaire is completed)
 with st.sidebar:
     st.header("User Inputs")
     name = st.text_input("Name")
@@ -70,9 +38,94 @@ with st.sidebar:
     skin_tone = st.text_input("Skin Tone (Hex Code)", value="#ffffff")
 
     if st.button("Reset Chat"):
-        reset_chat(user_id)
+        reset_chat()
 
-# Chat UI
+# Button to open the questionnaire
+if st.button("Please fill the questionnaire"):
+    st.session_state.questionnaire_open = True
+
+# Display the questionnaire if the button was clicked
+if st.session_state.questionnaire_open and not st.session_state.questionnaire_submitted:
+    st.header("Style Preferences Questionnaire")
+    st.write("Please answer some questions. It's your choice to skip some if you like.")
+
+    # Priority Questions
+    style_preference = st.radio("Which style do you prefer the most?", ["Casual", "Formal", "Streetwear", "Athleisure", "Baggy"], index=0)
+    color_palette = st.radio("What color palette do you wear often?", ["Neutrals", "Bright Colors", "Pastels", "Dark Shades"], index=0)
+    everyday_style = st.radio("How would you describe your everyday style?", ["Relaxed", "Trendy", "Elegant", "Bold"], index=0)
+    preferred_prints = st.radio("What type of prints do you like?", ["Solid", "Stripes", "Floral", "Geometric", "Animal Print"], index=0)
+    season_preference = st.radio("Which season influences your wardrobe the most?", ["Spring", "Summer", "Fall", "Winter"], index=0)
+    outfit_priority = st.radio("What do you prioritize when choosing an outfit?", ["Comfort", "Style", "Affordability", "Brand"], index=0)
+    experiment_with_trends = st.radio("How often do you experiment with new trends?", ["Always", "Sometimes", "Rarely", "Never"], index=0)
+    accessories = st.radio("What kind of accessories do you usually wear?", ["Watches", "Rings", "Necklaces", "Bracelets", "Earrings"], index=0)
+    fit_preference = st.radio("What fit do you prefer in clothes?", ["Loose", "Tailored", "Fitted", "Oversized"], index=0)
+    material_preference = st.radio("Which material do you prefer?", ["Cotton", "Linen", "Silk", "Denim", "Wool"], index=0)
+
+    # Outfit Preferences
+    top_preference = st.radio("What type of tops do you wear most often?", ["T-shirts", "Blouses", "Sweaters", "Hoodies"], index=0)
+    bottom_preference = st.radio("What kind of bottoms do you prefer?", ["Jeans", "Trousers", "Skirts", "Shorts"], index=0)
+    outerwear_preference = st.radio("What is your go-to outerwear?", ["Jacket", "Coat", "Blazer", "Sweater"], index=0)
+    footwear_preference = st.radio("What’s your preferred footwear for daily wear?", ["Sneakers", "Boots", "Flats", "Heels"], index=0)
+    dress_frequency = st.radio("How often do you wear dresses or jumpsuits?", ["Frequently", "Sometimes", "Rarely", "Never"], index=0)
+    layering_preference = st.radio("Do you often layer your outfits?", ["Always", "Sometimes", "Rarely", "Never"], index=0)
+    jeans_fit = st.radio("Which fit of jeans do you prefer?", ["Skinny", "Straight", "Bootcut", "Wide-leg"], index=0)
+    formal_wear_frequency = st.radio("How often do you wear formal attire?", ["Daily", "Weekly", "Occasionally", "Rarely"], index=0)
+    sportswear_preference = st.radio("What kind of sportswear do you prefer?", ["T-shirt and Shorts", "Tracksuit", "Leggings and Tank Top", "Compression Wear", "Sports Bra and Leggings", "Joggers and Hoodie"], index=0)
+    party_outfit = st.radio("What do you usually wear to a party?", ["Dress", "Suit", "Casual", "Themed"], index=0)
+
+    # Fashion Experience
+    confidence_in_style = st.radio("Do you feel confident in your style choices?", ["Always", "Sometimes", "Rarely", "Never"], index=0)
+    follow_fashion_trends = st.radio("Do you follow fashion trends?", ["Always", "Sometimes", "Rarely", "Never"], index=0)
+    look_for_inspiration = st.radio("How often do you look for style inspiration?", ["Daily", "Weekly", "Occasionally", "Never"], index=0)
+    wardrobe_satisfaction = st.radio("How do you feel about your wardrobe?", ["Satisfied", "Needs improvement", "Outdated", "Too small"], index=0)
+    unique_style = st.radio("Would you describe your style as unique?", ["Yes", "No", "Unsure"], index=0)
+    outfit_struggle = st.radio("How often do you struggle to find the right outfit?", ["Frequently", "Sometimes", "Rarely", "Never"], index=0)
+    fashion_preference = st.radio("Do you prefer timeless fashion or fast fashion?", ["Timeless", "Fast fashion", "Mix of both"], index=0)
+    gender_neutral_clothing = st.radio("Do you wear gender-neutral clothing?", ["Yes", "No", "Sometimes"], index=0)
+    special_occasion_attire = st.radio("How often do you dress up for special occasions?", ["Frequently", "Sometimes", "Rarely", "Never"], index=0)
+    trendsetter = st.radio("Would you consider yourself a trendsetter?", ["Yes", "No", "Unsure"], index=0)
+
+    # Interaction with Fashion AI
+    ai_usefulness = st.radio("How useful is the AI's fashion advice?", ["Very Useful", "Somewhat Useful", "Not Useful"], index=0)
+    trust_in_ai = st.radio("Do you trust the AI's fashion suggestions?", ["Yes", "Sometimes", "No"], index=0)
+    ai_preference = st.radio("Do you prefer more images or text-based recommendations?", ["Images", "Text", "Both"], index=0)
+    ai_usage_frequency = st.radio("How often do you use the fashion AI?", ["Daily", "Weekly", "Occasionally", "Rarely"], index=0)
+    ai_match_preferences = st.radio("Does the AI suggest products based on your preferences?", ["Always", "Sometimes", "Rarely", "Never"], index=0)
+    ai_recommendation = st.radio("Would you recommend the fashion AI to others?", ["Yes", "No", "Maybe"], index=0)
+    ai_understanding_style = st.radio("How would you rate the AI’s ability to understand your style?", ["Excellent", "Good", "Average", "Poor"], index=0)
+    more_personalized_recommendations = st.radio("Would you like more personalized recommendations?", ["Yes", "No", "Maybe"], index=0)
+    event_suggestions = st.radio("Is the AI helpful in suggesting outfits for events?", ["Yes", "No", "Sometimes"], index=0)
+    ai_improvements = st.radio("What could the AI improve?", ["Better style understanding", "More personalized suggestions", "More trend advice", "Visual examples"], index=0)
+
+    # Submit button for questionnaire
+    if st.button("Submit Questionnaire"):
+        # Store questionnaire responses in a DataFrame
+        questionnaire_data = {
+            "Name": name,
+            "Age": age,
+            "Location": location,
+            "fashion_preference": fashion_preference,
+            "unique_style": unique_style,
+            "follow_fashion_trends": follow_fashion_trends,
+            "footwear_preference": footwear_preference,
+            "material_preference": material_preference,
+            "Style Preference": style_preference,
+            "Color Palette": color_palette,
+            "Everyday Style": everyday_style,
+            "preferred_prints": preferred_prints,
+            "ai_usefulness": ai_usefulness     
+        }
+        
+        df = pd.DataFrame([questionnaire_data])  # Create DataFrame from dictionary
+
+        # Append to CSV file
+        df.to_csv("questionnaire_responses.csv", mode='a', header=not pd.io.common.file_exists("questionnaire_responses.csv"), index=False)
+        
+        st.session_state.questionnaire_open = False
+        st.session_state.questionnaire_submitted = True
+        st.success("Thank you for completing the questionnaire!")
+
+# Chat function (this will work regardless of the questionnaire status)
 st.title(st.session_state.chat_title)
 
 # Display all previous chat messages
@@ -85,10 +138,12 @@ user_input = st.chat_input("Ask anything about fashion...")
 if user_input:
     # Store user message in the chat history
     st.session_state.messages.append({"role": "user", "content": user_input})
-    store_message_in_pinecone(user_input, user_id, "user")
 
     # Prepare messages for the API call, including the previous conversation
     messages = [system_message] + st.session_state.messages
+
+    # Add the latest user input as the most recent message
+    messages.append({"role": "user", "content": user_input})
 
     try:
         # Generate a response from the Groq API
@@ -112,8 +167,7 @@ if user_input:
 
     # Store assistant response in the chat history
     st.session_state.messages.append({"role": "assistant", "content": response_content})
-    store_message_in_pinecone(response_content, user_id, "assistant")
 
     # Display assistant response
-    with st.chat_message(name="assistant"):
+    with st.chat_message("assistant"):
         st.markdown(response_content)
