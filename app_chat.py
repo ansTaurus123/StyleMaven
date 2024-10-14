@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
-import pinecone
 from groq import Groq
-from pinecone import ServerlessSpec
+from pinecone import Pinecone, ServerlessSpec
 
 # Initialize the Groq client with your API key
 client = Groq(api_key="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")
