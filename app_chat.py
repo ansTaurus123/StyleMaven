@@ -1,12 +1,6 @@
 import streamlit as st
 import pandas as pd
 from groq import Groq
-import pinecone
-
-import pinecone
-
-pc = Pinecone(api_key="765debca-6efe-4d64-a9fd-fe2eb6386158")
-index = pc.Index("fashionassistant")
 
 # Initialize the Groq client with your API key
 client = Groq(api_key="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")
@@ -14,7 +8,7 @@ client = Groq(api_key="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"
 # Define the system message for the model
 system_message = {
     "role": "system",
-    "content": "You are an experienced Fashion designer..."
+    "content": "You are an experienced Fashion designer who starts conversation with proper greet, giving valuable and catchy fashion advices and and suggestions, stays to the point, asks questions only if the user have any concern over your provided suggestions, taking inputs like name, age, gender, location, ethnicity, height, weight, skin tone"
 }
 
 # Function to reset the chat
@@ -45,16 +39,6 @@ with st.sidebar:
 
     if st.button("Reset Chat"):
         reset_chat()
-# Function to store chat in Pinecone
-def store_chat_in_pinecone(chat_data):
-    vector = [1] * 1536  # Dummy vector (Replace this with actual embedding from your model)
-    chat_id = len(st.session_state.messages)  # Chat ID to track messages
-    index.upsert(vectors=[(str(chat_id), vector, chat_data)])
-
-# Function to store questionnaire data in Pinecone
-def store_questionnaire_in_pinecone(questionnaire_data):
-    vector = [1] * 1536  # Dummy vector (Replace this with actual embedding from your model)
-    index.upsert(vectors=[("questionnaire", vector, questionnaire_data)])
 
 # Button to open the questionnaire
 if st.button("Please fill the questionnaire"):
@@ -131,9 +115,11 @@ if st.session_state.questionnaire_open and not st.session_state.questionnaire_su
             "preferred_prints": preferred_prints,
             "ai_usefulness": ai_usefulness     
         }
+        
         df = pd.DataFrame([questionnaire_data])  # Create DataFrame from dictionary
+
+        # Append to CSV file
         df.to_csv("questionnaire_responses.csv", mode='a', header=not pd.io.common.file_exists("questionnaire_responses.csv"), index=False)
-        store_questionnaire_in_pinecone(questionnaire_data)  # Store in Pinecone
         
         st.session_state.questionnaire_open = False
         st.session_state.questionnaire_submitted = True
@@ -170,7 +156,7 @@ if user_input:
         # Generate a response from the Groq API
         completion = client.chat.completions.create(
             model="llama3-8b-8192",
-            messages=messages,
+            messages=messages,  # Send the entire conversation with profile info
             temperature=1,
             max_tokens=1024,
             top_p=1,
@@ -188,9 +174,6 @@ if user_input:
 
     # Store assistant response in the chat history
     st.session_state.messages.append({"role": "assistant", "content": response_content})
-
-    # Store chat history in Pinecone
-    store_chat_in_pinecone(st.session_state.messages, user_id)
 
     # Display assistant response
     with st.chat_message("assistant"):
