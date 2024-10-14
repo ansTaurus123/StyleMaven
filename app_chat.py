@@ -2,12 +2,16 @@ import streamlit as st
 import pandas as pd
 import pinecone
 from groq import Groq
+from pinecone import ServerlessSpec
 
 # Initialize the Groq client with your API key
 client = Groq(api_key="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")
+# Initialize Pinecone with API key and serverless spec for AWS region 'us-east-1'
+pinecone.init(
+    api_key='ed2e35ad-250c-4831-a198-229d14c0901d',  # Replace with your actual API key
+    spec=ServerlessSpec(cloud="aws", region="us-east-1")  # Specify the cloud and region
+)
 
-# Initialize Pinecone with the correct format
-pinecone.init(api_key='ed2e35ad-250c-4831-a198-229d14c0901d', environment='us-east-1-aws')
 index_name = 'fashion-assistant'  # Name of the Pinecone index
 if index_name not in pinecone.list_indexes():
     pinecone.create_index(index_name, dimension=512)  # Change dimension based on your embeddings
