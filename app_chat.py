@@ -19,7 +19,7 @@ def reset_chat():
 # Initialize session state variables
 if 'messages' not in st.session_state:
     st.session_state.messages = []
-    st.session_state.chat_title = "Fashion Assistant"
+    st.session_state.chat_title = "Friday"
 if 'questionnaire_open' not in st.session_state:
     st.session_state.questionnaire_open = False
 if 'questionnaire_submitted' not in st.session_state:
