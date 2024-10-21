@@ -8,7 +8,7 @@ client = Groq(api_key="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"
 # Define the system message for the model
 system_message = {
     "role": "system",
-    "content": "You are an experienced Fashion designer who starts conversation with proper greet, giving valuable and catchy fashion advices and and suggestions, stays to the point, asks questions only if the user have any concern over your provided suggestions, taking inputs like name, age, gender, location, ethnicity, height, weight, skin tone"
+    "content": "You are an experienced Fashion designer who starts conversation with proper greet, giving valuable and catchy fashion advices and and suggestions, stays to the point and precise, asks questions only if the user have any concern over your provided suggestions, taking inputs like name, age, gender, location, ethnicity, height, weight"
 }
 
 # Function to reset the chat
@@ -35,7 +35,6 @@ with st.sidebar:
     ethnicity = st.selectbox("Ethnicity", options=["Asian", "Black", "Hispanic", "White", "Other"])
     height = st.number_input("Height (cm)", min_value=50, max_value=250, value=170)
     weight = st.number_input("Weight (kg)", min_value=20, max_value=200, value=70)
-    skin_tone = st.text_input("Skin Tone (Hex Code)", value="#ffffff")
 
     if st.button("Reset Chat"):
         reset_chat()
@@ -142,7 +141,7 @@ if user_input:
     # Create a message containing the user's personal inputs
     user_profile_message = {
         "role": "user",
-        "content": f"User profile: Name: {name}, Age: {age}, Location: {location}, Gender: {gender}, Ethnicity: {ethnicity}, Height: {height}, Weight: {weight}, Skin Tone: {skin_tone}"
+        "content": f"User profile: Name: {name}, Age: {age}, Location: {location}, Gender: {gender}, Ethnicity: {ethnicity}, Height: {height}, Weight: {weight}"
     }
 
     # Check if the profile message is already in the conversation; if not, add it
