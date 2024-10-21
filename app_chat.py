@@ -138,18 +138,14 @@ if user_input:
     # Store user message in the chat history
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # Create a message containing the user's personal inputs
-    user_profile_message = {
-        "role": "user",
-        "content": f"User profile: Name: {name}, Age: {age}, Location: {location}, Gender: {gender}, Ethnicity: {ethnicity}, Height: {height}, Weight: {weight}"
-    }
-
-    # Check if the profile message is already in the conversation; if not, add it
-    if len(st.session_state.messages) == 1:  # Assuming this is the first message
-        st.session_state.messages.insert(0, user_profile_message)
+    # Create a user profile string
+    user_profile_string = (
+        f"User profile: Name: {name}, Age: {age}, Location: {location}, "
+        f"Gender: {gender}, Ethnicity: {ethnicity}, Height: {height}, Weight: {weight}"
+    )
 
     # Prepare messages for the API call, including the profile and the conversation history
-    messages = [system_message] + st.session_state.messages
+    messages = [system_message, {"role": "user", "content": user_profile_string}] + st.session_state.messages
 
     try:
         # Generate a response from the Groq API
